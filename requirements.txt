@@ -4,4 +4,4 @@ python-dotenv
 openai
 streamlit-audiorecorder
 pydub
-audioop-lts; python_version>='3.13'
+audioop-lts
