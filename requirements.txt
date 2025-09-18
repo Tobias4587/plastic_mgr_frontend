@@ -1,6 +1,7 @@
-requests
 streamlit
+requests
 python-dotenv
 openai
 streamlit-audiorecorder
-gunicorn
+pydub
+pyaudioop
