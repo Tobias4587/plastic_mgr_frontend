@@ -1,15 +1,8 @@
-# Frontend dependencies
-streamlit==1.44.0
-python-dotenv==1.0.1
-requests==2.32.3
+streamlit
+requests
+python-dotenv
+openai
+streamlit-audiorecorder
+pydub
+audioop-lts
 
-# OpenAI SDK
-openai==1.84.0
-
-# Audio / Speech
-streamlit-audiorecorder==0.0.3
-pydub==0.25.1
-pyaudio==0.2.14
-
-# Utilities
-typing-extensions>=4.13.0
