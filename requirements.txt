@@ -5,4 +5,5 @@ openai
 streamlit-audiorecorder
 pydub
 audioop-lts
+streamlit-mic-recorder @ git+https://github.com/ai-yash/st-mic-recorder.git
 
