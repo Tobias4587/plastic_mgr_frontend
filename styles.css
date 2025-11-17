@@ -1,0 +1,134 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex; /* Make sure the body takes up the viewport */
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh; /* Full viewport height */
+    background-color: #f0f2f5; /* Light background */
+}
+
+.chat-container {
+    width: 100%;
+    max-width: 400px; /* Typical mobile/chat app width */
+    height: 100vh; /* Full height on small screens */
+    display: flex;
+    flex-direction: column; /* Stack header, history, and input vertically */
+    background-color: white;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* 1. Header Styling */
+.chat-header {
+    padding: 15px;
+    background-color: #008069; /* WhatsApp Green */
+    color: white;
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0; /* Prevents the header from shrinking */
+}
+
+/* 2. Chat History Styling */
+.chat-history {
+    flex-grow: 1; /* This is the key: makes it take up all available space */
+    padding: 10px;
+    overflow-y: auto; /* Allows scrolling of messages */
+    background-color: #e5ddd5; /* Chat background color */
+}
+
+.message {
+    padding: 8px 12px;
+    margin: 5px 0;
+    border-radius: 18px;
+    max-width: 70%;
+    word-wrap: break-word;
+    font-size: 0.9em;
+    line-height: 1.3;
+}
+
+.incoming {
+    background-color: #ffffff; /* White background */
+    align-self: flex-start;
+    margin-right: auto;
+    border-bottom-left-radius: 2px;
+}
+
+.outgoing {
+    background-color: #dcf8c6; /* Light green background */
+    align-self: flex-end;
+    margin-left: auto;
+    text-align: right;
+    border-bottom-right-radius: 2px;
+}
+.chat-history {
+    display: flex; /* Makes messages stack correctly */
+    flex-direction: column;
+    overflow-y: scroll;
+}
+
+
+/* 3. Chat Input Styling */
+.chat-input-area {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    background-color: #f0f0f0;
+    border-top: 1px solid #ccc;
+    flex-shrink: 0; /* Prevents the input area from shrinking */
+}
+
+.chat-input {
+    flex-grow: 1; /* Makes the text input take most of the available horizontal space */
+    padding: 10px 15px;
+    border: none;
+    border-radius: 20px;
+    margin: 0 8px;
+    font-size: 16px;
+    outline: none;
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #008069;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.icon-btn:hover {
+    background-color: #e0e0e0;
+}
+
+.attachment-btn {
+    font-weight: bold;
+    font-size: 24px;
+}
+
+.send-btn {
+    margin-left: -5px; /* Pull the send button closer to the record button */
+}
+
+.record-btn, .send-btn {
+    color: white;
+    background-color: #008069;
+    margin-left: 5px;
+}
+.record-btn:hover, .send-btn:hover {
+    background-color: #006b58;
+}
+
+/* Optional: Make it look better on very large screens */
+@media (min-width: 768px) {
+    .chat-container {
+        height: 90vh;
+        border-radius: 10px;
+    }
+}

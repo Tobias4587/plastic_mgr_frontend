@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plastic-Manager Chat</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/recordrtc@5.6.2/RecordRTC.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.2.12/marked.min.js"></script>
+</head>
+<body>
+
+    <div class="chat-container">
+
+        <header class="chat-header">
+            <h1>Plastic-Manager</h1>
+        </header>
+
+        <section class="chat-history" id="chat-history">
+            </section>
+
+        <footer class="chat-input-area">
+            
+            <input type="file" id="file-uploader" style="display:none;" multiple>
+            <button class="icon-btn attachment-btn" title="Add Attachment" id="btn-attachment">
+                +
+            </button>
+            
+            <input type="text" class="chat-input" placeholder="Type your message..." id="user-input">
+
+            <button class="icon-btn record-btn" title="Record Voice" id="btn-record">
+                🎤
+            </button>
+            
+            <button class="icon-btn send-btn" title="Send Message" id="btn-send">
+                ▶
+            </button>
+        </footer>
+
+    </div>
+
+<script>
+
+// index.html (around line 45)
+
+    const CHAT_API_URL = "http://127.0.0.1:5001/api/chat";
+    const TRANSCRIBE_API_URL = "http://127.0.0.1:5001/api/transcribe";
+    // const COMMIT_API_URL = "http://127.0.0.1:5001/api/commit_staged";
+    const STAGE_API_URL = "http://127.0.0.1:5000/uploads"; // Assuming the original backend URL is still 5000
+
+    // CONSOLIDATED ELEMENT DEFINITIONS START HERE - DELETE ALL PREVIOUS ELEMENT LINES
+    const history = document.getElementById('chat-history');
+    const input = document.getElementById('user-input');
+    const sendButton = document.getElementById('btn-send');
+    const recordButton = document.getElementById('btn-record');
+    const attachButton = document.getElementById('btn-attachment');
+    const fileUploader = document.getElementById('file-uploader');
+    // CONSOLIDATED ELEMENT DEFINITIONS END HERE
+
+    // Simple state management for the client
+    let localChatHistory = [];
+    let isRecording = false;
+    let recorder = null;
+    let stagedTokens = []; // Tokens pending commit
+
+    // ... The rest of your script
+
+    console.log("Input element:", input);
+    console.log("Send button:", sendButton);
+
+    // Initial message
+    localChatHistory.push({ role: 'incoming', content: 'Hello! Welcome to Plastic-Manager. How can I help you?' });
+    renderHistory();
+
+    /** Message Rendering **/
+    function createMessage(role, content) {
+        const div = document.createElement('div');
+        div.classList.add('message', role);
+        div.innerHTML = marked.parse(content); // Use marked to render markdown content
+        return div;
+    }
+
+    function renderHistory() {
+        history.innerHTML = '';
+        localChatHistory.forEach(msg => {
+            history.appendChild(createMessage(msg.role, msg.content));
+        });
+        // Scroll to the bottom
+        history.scrollTop = history.scrollHeight;
+    }
+
+    function addMessage(role, content) {
+        localChatHistory.push({ role, content });
+        renderHistory();
+    }
+    
+    /** Chat Logic **/
+    function setInputEnabled(enabled) {
+        input.disabled = !enabled;
+        sendButton.disabled = !enabled;
+        recordButton.disabled = !enabled;
+        attachButton.disabled = !enabled;
+        input.focus();
+    }
+
+    async function sendMessage(message) {
+        if (!message.trim()) return;
+
+        setInputEnabled(false);
+        addMessage('outgoing', message);
+        input.value = '';
+
+        try {
+            const response = await fetch(CHAT_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                let reply = data.reply;
+                
+                // --- Simple client-side Commit staged files detection ---
+                // If the user's message was an explicit commit command, and we have staged files,
+                // we handle the commitment here before showing the LLM's response.
+
+                
+                addMessage('incoming', reply);
+            } else {
+                addMessage('incoming', `Error: ${data.error || 'Could not get a response.'}`);
+            }
+        } catch (error) {
+            addMessage('incoming', `Network Error: ${error.message}`);
+        } finally {
+            setInputEnabled(true);
+        }
+    }
+    
+    sendButton.addEventListener('click', () => sendMessage(input.value));
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage(input.value);
+    });
+
+    /** Attachment/Uploader Logic **/
+    attachButton.addEventListener('click', () => {
+        fileUploader.click(); // Trigger the hidden file input
+    });
+
+    fileUploader.addEventListener('change', async (event) => {
+        const files = event.target.files;
+        if (files.length === 0) return;
+
+        setInputEnabled(false);
+        addMessage('incoming', `Staging ${files.length} file(s)...`);
+
+        let newTokens = [];
+        let fileNames = [];
+        let hasError = false;
+
+        for (const file of files) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(STAGE_API_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.status === "staged" && data.meta && data.meta.token) {
+                    newTokens.push(data.meta.token);
+                    fileNames.push(data.meta.filename);
+                } else {
+                    hasError = true;
+                    addMessage('incoming', `Error staging ${file.name}: ${data.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                hasError = true;
+                addMessage('incoming', `Network Error staging ${file.name}: ${error.message}`);
+            }
+        }
+
+        fileUploader.value = ''; // Clear the input so same file can be staged again
+        setInputEnabled(true);
+
+        if (newTokens.length > 0) {
+            stagedTokens.push(...newTokens);
+
+            try {
+                await fetch("http://127.0.0.1:5001/api/register_staged", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        tokens: newTokens,
+                        filenames: fileNames
+                    })
+               });
+            } catch (e) {
+                console.error("Failed to register staged files with chat backend:", e);
+            }
+            addMessage('incoming', `**Staging erfolgreich.** ${newTokens.length} Datei(en) vorgemerkt: ${fileNames.join(', ')}. Soll ich anhängen? Tippen Sie **'upload now'**.`);
+        } else if (!hasError) {
+            addMessage('incoming', 'Keine Dateien erfolgreich vorgemerkt.');
+        }
+    });
+
+
+    /** Voice Recording Logic **/
+    recordButton.addEventListener('click', () => {
+        if (!isRecording) {
+            startRecording();
+        } else {
+            stopRecording();
+        }
+    });
+
+    function startRecording() {
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                // --- ADDED INSPECTION LOG ---
+                const audioTrack = stream.getAudioTracks()[0];
+                console.log("Audio Track Settings:", audioTrack.getSettings());
+                console.log("Audio Track Capabilities:", audioTrack.getCapabilities());
+                // -----------------------------
+                recorder = new RecordRTC(stream, {
+                    type: 'audio',
+                    mimeType: 'audio/wav',
+                    recorderType: RecordRTC.StereoAudioRecorder,
+                    disableLogs: true
+                });
+                recorder.startRecording();
+                isRecording = true;
+                recordButton.textContent = '⏹️'; // Stop symbol
+            })
+            .catch(error => {
+                console.error("Recording failed:", error);
+                addMessage('incoming', `Voice recording failed: ${error.message}`);
+            });
+    }
+
+    function stopRecording() {
+        if (!recorder) return;
+        
+        recordButton.textContent = '🎤'; // Mic symbol
+        isRecording = false;
+        setInputEnabled(false);
+
+        recorder.stopRecording(async () => {
+            const blob = recorder.getBlob();
+            // console.log("Recorded blob:", blob.type, blob.size);   // <--- add this
+            // // --- Debug: play back the recorded audio locally ---
+            // const debugUrl = URL.createObjectURL(blob);
+            // const debugAudio = new Audio(debugUrl);
+            // debugAudio.play(); // will play through your speakers/headset
+            // const debugUrl = URL.createObjectURL(blob);
+            // #end debug audio replay loudspeaker
+            // const audioElem = document.createElement('audio');
+            // audioElem.controls = true;
+            // audioElem.src = debugUrl;
+            // document.body.appendChild(audioElem);
+            // #end debug audio visible
+            // // Send the audio Blob to the Flask transcription endpoint
+            const formData = new FormData();
+            formData.append('audio', blob, 'speech.wav');
+            
+            addMessage('outgoing', '[Voice message sent for transcription...]');
+
+            try {
+                const response = await fetch(TRANSCRIBE_API_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    // Send the transcribed text as a regular message
+                    const transcribedText = data.text;
+                    
+                    console.log("Transcribed text from server:", transcribedText);
+
+                    // Remove placeholder message
+                    localChatHistory.pop(); 
+
+                    if (!transcribedText) {
+                        addMessage('incoming', 'Transcription returned empty text.');
+                        return;
+                    }
+
+                    
+
+                    sendMessage(transcribedText);
+                } else {
+                    addMessage('incoming', `Transcription Error: ${data.error || 'Could not transcribe.'}`);
+                }
+            } catch (error) {
+                addMessage('incoming', `Network Error during transcription: ${error.message}`); 
+            } finally {
+                    // Safely destroy the recorder and reset state, avoiding the problematic stream cleanup
+                    if (recorder) {
+                        recorder.destroy(); 
+                    }
+                    recorder = null;
+                    setInputEnabled(true);
+            }
+            
+
+
+        });
+    }
+
+</script>
+</body>
