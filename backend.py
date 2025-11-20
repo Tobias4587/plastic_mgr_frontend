@@ -571,4 +571,5 @@ if __name__ == "__main__":
     print("Starting Flask server...")
     print("Access the chat at: http://127.0.0.1:5001/")
     # NOTE: Running on port 5001 to avoid collision with the backend URL's default 5000
-    app.run(port=5001, debug=True)
+
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False)
