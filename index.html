@@ -189,7 +189,7 @@
             stagedTokens.push(...newTokens);
 
             try {
-                await fetch("http://127.0.0.1:5001/api/register_staged", {
+                await fetch(f"{BACKEND_URL}/cards", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -312,3 +312,4 @@
 
 </script>
 </body>
+
