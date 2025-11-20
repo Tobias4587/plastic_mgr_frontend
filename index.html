@@ -40,17 +40,16 @@
 
 <script>
     // === BASE URL – Twój backend na Render ===
-    const API_BASE = "https://plastic-mgr-backend.onrender.com";
+    // Backend hosting the CHAT API
+    const CHAT_BACKEND = "https://plastic-mgr-frontend.onrender.com";
 
-    // === Endpoints po stronie backend.py (chat + transcribe + register) ===
-    const CHAT_API_URL       = `${API_BASE}/api/chat`;
-    const TRANSCRIBE_API_URL = `${API_BASE}/api/transcribe`;
-    const REGISTER_API_URL   = `${API_BASE}/api/register_staged`;
-    // jeśli kiedyś będziesz używać z frontu:
-    const COMMIT_API_URL     = `${API_BASE}/api/commit_staged`;
+    // Backend hosting the CARDS API
+    const CARDS_BACKEND = "https://plastic-mgr-backend.onrender.com";
 
-    // === Endpoint stagingu plików po stronie cards backendu ===
-    // skoro cards backend też jest pod API_BASE:
+    const CHAT_API_URL       = `${CHAT_BACKEND}/api/chat`;
+    const TRANSCRIBE_API_URL = `${CHAT_BACKEND}/api/transcribe`;
+    const REGISTER_API_URL   = `${CHAT_BACKEND}/api/register_staged`;
+    const COMMIT_API_URL     = `${CHAT_BACKEND}/api/commit_staged`;
     const STAGE_API_URL = `${API_BASE}/uploads`;
 
     // Elementy DOM
@@ -292,3 +291,4 @@
 </script>
 </body>
 </html>
+
